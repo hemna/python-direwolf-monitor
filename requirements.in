@@ -1,11 +1,5 @@
 bump2version
-wheel
 watchdog
-flake8
-tox
-coverage
-Sphinx
-twine
 Click
 paho-mqtt
 click-completion
@@ -14,3 +8,4 @@ oslo-config
 oslo-context
 oslo-log
 pbr
+RPi.GPIO
