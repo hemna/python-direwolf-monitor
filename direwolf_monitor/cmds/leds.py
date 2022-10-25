@@ -6,7 +6,11 @@ import click
 from oslo_config import cfg
 from oslo_context import context
 from oslo_log import log
-import RPi.GPIO as GPIO
+try:
+    import RPi.GPIO as GPIO
+except Exception:
+    print("fuct")
+    pass
 
 import direwolf_monitor
 from direwolf_monitor.cli import cli
@@ -30,9 +34,29 @@ def monitor_leds(ctx):
 
     console.print("monitor LEDS Exit.")
     count = 1
-    while console.status("Checking status of TX LED") as st:
-        state = GPIO.input(26)
-        console.out(state)
+    msg = "Checking status of TX LED "
+    with console.status(msg) as status:
+        while count < 1000:
+            led_state = GPIO.input(26)
+            status.update(f"{msg} : State {led_state} count {count}"
+            count += 1
+            time.sleep(.1)
 
+
+@cli.command()
+@cli_helper.add_options(cli_helper.common_options)
+@click.pass_context
+@cli_helper.process_standard_options
+def piss(ctx):
+    console = ctx.obj['console']
+    console.print("PISS")
+    count = 1
+    import time
+    msg = "Checking status of TX LED "
+    with console.status(msg) as status:
+        while count <= 10:
+            status.update(f"{msg} :  PISS {count}")
+            time.sleep(1)
+            count += 1
 
 
