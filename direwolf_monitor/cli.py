@@ -1,11 +1,11 @@
 """Console script for python_direwolf_monitor."""
 import sys
 import click
-import click_completion
+# import click_completion
 
 from oslo_config import cfg
-from oslo_log import log
 
+import direwolf_monitor
 from direwolf_monitor import cli_helper
 
 CONF = cfg.CONF
@@ -14,16 +14,16 @@ APP = 'dwm'
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 
 
-def custom_startswith(string, incomplete):
-    """A custom completion match that supports case insensitive matching."""
-    if os.environ.get("_CLICK_COMPLETION_COMMAND_CASE_INSENSITIVE_COMPLETE"):
-        string = string.lower()
-        incomplete = incomplete.lower()
-    return string.startswith(incomplete)
+# def custom_startswith(string, incomplete):
+#     """A custom completion match that supports case insensitive matching."""
+#     if os.environ.get("_CLICK_COMPLETION_COMMAND_CASE_INSENSITIVE_COMPLETE"):
+#         string = string.lower()
+#         incomplete = incomplete.lower()
+#     return string.startswith(incomplete)
 
 
-click_completion.core.startswith = custom_startswith
-click_completion.init()
+# click_completion.core.startswith = custom_startswith
+# click_completion.init()
 
 
 def signal_handler(sig, frame):
@@ -61,7 +61,7 @@ def version(ctx):
 def main(args=None):
     """Console script for direwolf_monitor."""
     from .cmds import (
-        leds
+        log
     )
     cli(auto_envvar_prefix="dwm")
 

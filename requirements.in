@@ -1,8 +1,6 @@
 click
-click-completion
 rich
 oslo-config
 loguru
 paho-mqtt
-RPi.GPIO
 watchdog
