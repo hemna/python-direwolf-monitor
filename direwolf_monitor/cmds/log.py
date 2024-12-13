@@ -47,12 +47,12 @@ def _on_connect(client, userdata, flags, rc):
         f"Connected to mqtt://{client}"
     )
 
-def _on_disconnect():
+def _on_disconnect(client, userdata, rc):
     LOG.warning(
         "MQTT Client disconnected"
     )
             
-def _create_mqtt_client(ctx, mqtt_host, mqtt_port, mqtt_topic):
+def _create_mqtt_client(ctx, mqtt_host, mqtt_port, mqtt_username, mqtt_password):
     console = ctx.obj['console']
     
     client = mqtt.Client(
@@ -64,6 +64,11 @@ def _create_mqtt_client(ctx, mqtt_host, mqtt_port, mqtt_topic):
     # self.client.on_publish = self.on_publish
     client.on_connect = _on_connect
     client.on_disconnect = _on_disconnect
+    
+    client.username_pw_set(
+       mqtt_username,
+       mqtt_password 
+    )
 
     mqtt_properties = Properties(PacketTypes.PUBLISH)
     mqtt_properties.MessageExpiryInterval = 30  # in seconds
@@ -77,7 +82,7 @@ def _create_mqtt_client(ctx, mqtt_host, mqtt_port, mqtt_topic):
         keepalive=60,
         # properties=properties
     )
-    
+    return client
 
 
 @cli.command()
@@ -102,6 +107,18 @@ def _create_mqtt_client(ctx, mqtt_host, mqtt_port, mqtt_topic):
     help="The MQTT Topic to send entries to" ,
 )
 @click.option(
+    "--mqtt-username",
+    envvar="DWM_MQTT_USERNAME",
+    show_envvar=True,
+    help="The mqtt username for login",
+)
+@click.option(
+    "--mqtt-password",
+    envvar="DWM_MQTT_PASSWORD",
+    show_envvar=True,
+    help="The mqtt password for login",
+)
+@click.option(
     "--direwolf-log",
     default="./direwolf.log",
     show_default=True,
@@ -109,7 +126,7 @@ def _create_mqtt_client(ctx, mqtt_host, mqtt_port, mqtt_topic):
 )
 @click.pass_context
 @cli_helper.process_standard_options
-def log_to_mqtt(ctx, mqtt_host, mqtt_port, mqtt_topic, direwolf_log):
+def log_to_mqtt(ctx, mqtt_host, mqtt_port, mqtt_topic, mqtt_username, mqtt_password, direwolf_log):
     """Tail direwolf.log and put entries in MQTT
 
     Args:
@@ -125,12 +142,20 @@ def log_to_mqtt(ctx, mqtt_host, mqtt_port, mqtt_topic, direwolf_log):
             
             # Create mqtt client connection
             status.update("Creating MQTT connection")
-            client = _create_mqtt_client(ctx, mqtt_host, mqtt_port, mqtt_topic)
+            client = _create_mqtt_client(
+                ctx,
+                mqtt_host,
+                int(mqtt_port),
+                mqtt_username,
+                mqtt_password
+            )
             
             line_number = 0
             with open(FILE, 'r') as file:
+                # now move the pointer to the end of the file
+                file.seek(0, 2)
                 for line in follow(file):
-                    status.update("Reading line {line_number} from {direwolf_log}")
+                    status.update(f"Reading line {line_number} from {direwolf_log}")
                     line_number += 1
                     console.print(line, end='')
                     client.publish(
