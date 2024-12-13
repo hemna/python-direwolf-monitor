@@ -5,6 +5,7 @@ import uuid
 
 import click
 from oslo_config import cfg
+import paho.mqtt.client as mqtt
 from paho.mqtt.packettypes import PacketTypes
 from paho.mqtt.properties import Properties
 
