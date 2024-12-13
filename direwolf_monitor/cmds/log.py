@@ -5,6 +5,9 @@ import uuid
 
 import click
 from oslo_config import cfg
+from paho.mqtt.packettypes import PacketTypes
+from paho.mqtt.properties import Properties
+
 
 import direwolf_monitor
 from direwolf_monitor.cli import cli
@@ -34,6 +37,46 @@ def follow(file, sleep_sec=0.1) -> Iterator[str]:
                 line = ''
         elif sleep_sec:
             time.sleep(sleep_sec)
+            
+def _on_publish(client, userdata, mid):
+    LOG.info(f"Published {mid}:{userdata}")
+
+def _on_connect(client, userdata, flags, rc):
+    LOG.info(
+        f"Connected to mqtt://{client}"
+    )
+
+def _on_disconnect():
+    LOG.warning(
+        "MQTT Client disconnected"
+    )
+            
+def _create_mqtt_client(ctx, mqtt_host, mqtt_port, mqtt_topic):
+    console = ctx.obj['console']
+    
+    client = mqtt.Client(
+        callback_api_version=mqtt.CallbackAPIVersion.VERSION2,
+        client_id="aprsd_mqtt_plugin",
+        # transport='websockets',
+        # protocol=mqtt.MQTTv5
+    )
+    # self.client.on_publish = self.on_publish
+    client.on_connect = _on_connect
+    client.on_disconnect = _on_disconnect
+
+    mqtt_properties = Properties(PacketTypes.PUBLISH)
+    mqtt_properties.MessageExpiryInterval = 30  # in seconds
+    properties = Properties(PacketTypes.CONNECT)
+    properties.SessionExpiryInterval = 30 * 60  # in seconds
+    LOG.info(f"Connecting to mqtt://{mqtt_host}:{mqtt_port}")
+    client.connect(
+        mqtt_host,
+        port=mqtt_port,
+        # clean_start=mqtt.MQTT_CLEAN_START_FIRST_ONLY,
+        keepalive=60,
+        # properties=properties
+    )
+    
 
 
 @cli.command()
@@ -78,11 +121,21 @@ def mqtt(ctx, mqtt_host, mqtt_port, mqtt_topic, direwolf_log):
     with console.status(msg) as status:
         my_file = Path(direwolf_log)
         if my_file.is_file():
+            
+            # Create mqtt client connection
+            status.update("Creating MQTT connection")
+            client = _create_mqtt_client(ctx, mqtt_host, mqtt_port, mqtt_topic)
+            
             line_number = 0
             with open(FILE, 'r') as file:
                 for line in follow(file):
                     status.update("Reading line {line_number} from {direwolf_log}")
                     line_number += 1
                     console.print(line, end='')
+                    client.publish(
+                        mqtt_topic,
+                        payload=line,
+                        qos=0
+                    )
         else:
             console.print(f"[bold red]{direwolf_log} doesn't exist.[/]")
