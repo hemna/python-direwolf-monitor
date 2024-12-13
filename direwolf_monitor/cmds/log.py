@@ -157,7 +157,7 @@ def log_to_mqtt(ctx, mqtt_host, mqtt_port, mqtt_topic, mqtt_username, mqtt_passw
                 for line in follow(file):
                     status.update(f"Reading line {line_number} from {direwolf_log}")
                     line_number += 1
-                    console.print(line, end='')
+                    print(line, end='')
                     client.publish(
                         mqtt_topic,
                         payload=line,
