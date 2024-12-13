@@ -1,4 +1,6 @@
+bump2version
 flake8
+gray
 isort
 mypy
 pep8-naming
@@ -9,4 +11,3 @@ pre-commit
 pip-tools
 pytest
 pytest-cov
-gray

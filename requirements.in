@@ -1,11 +1,8 @@
-bump2version
-watchdog
-Click
-paho-mqtt
+click
 click-completion
 rich
 oslo-config
-oslo-context
-oslo-log
-pbr
+loguru
+paho-mqtt
 RPi.GPIO
+watchdog

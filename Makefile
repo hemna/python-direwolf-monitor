@@ -1,6 +1,6 @@
 REQUIREMENTS_TXT ?= requirements.txt requirements-dev.txt
 WORKDIR?=.
-VENVDIR ?= $(WORKDIR)/.dwm-venv
+VENVDIR ?= $(WORKDIR)/.venv
 
 .DEFAULT_GOAL := help
 
