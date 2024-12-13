@@ -109,7 +109,7 @@ def _create_mqtt_client(ctx, mqtt_host, mqtt_port, mqtt_topic):
 )
 @click.pass_context
 @cli_helper.process_standard_options
-def mqtt(ctx, mqtt_host, mqtt_port, mqtt_topic, direwolf_log):
+def log_to_mqtt(ctx, mqtt_host, mqtt_port, mqtt_topic, direwolf_log):
     """Tail direwolf.log and put entries in MQTT
 
     Args:
