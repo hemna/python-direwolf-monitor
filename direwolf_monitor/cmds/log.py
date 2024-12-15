@@ -50,6 +50,7 @@ def _on_connect(client, userdata, flags, rc):
 
 def _on_disconnect(client, userdata, rc, flags, ass):
     print("MQTT Client disconnected")
+    print(f"_on_disconnect rc:{rc} flags:{flags}")
             
 def _create_mqtt_client(ctx, mqtt_host, mqtt_port, mqtt_username, mqtt_password):
     console = ctx.obj['console']
