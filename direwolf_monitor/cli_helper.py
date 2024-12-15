@@ -1,5 +1,6 @@
 from functools import update_wrapper
 import typing as t
+import os
 
 import click
 from oslo_config import cfg
@@ -56,6 +57,9 @@ def process_standard_options(f: F) -> F:
             default_config_files = [kwargs['config_file']]
         else:
             default_config_files = None
+            
+        # To prevent an error with aprsd's conf
+        os.environ["OS_DEFAULT__CALLSIGN"] = "NOCALL"
         CONF([], project='direwolf_monitor', version=direwolf_monitor.__version__,
              default_config_files=default_config_files)
 

@@ -1,6 +1,8 @@
 click
-rich
+haversine
 oslo-config
 loguru
 paho-mqtt
+rich
+term-image
 watchdog

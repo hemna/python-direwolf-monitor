@@ -12,6 +12,8 @@ click==8.1.3
     # via -r requirements.in
 debtcollector==3.0.0
     # via oslo-config
+haversine==2.9.0
+    # via -r requirements.in
 idna==3.10
     # via requests
 loguru==0.7.3
@@ -32,18 +34,24 @@ pbr==6.1.0
     # via
     #   oslo-i18n
     #   stevedore
+pillow==10.4.0
+    # via term-image
 pygments==2.18.0
     # via rich
 pyyaml==6.0.2
     # via oslo-config
 requests==2.32.3
-    # via oslo-config
+    # via
+    #   oslo-config
+    #   term-image
 rfc3986==2.0.0
     # via oslo-config
 rich==13.9.4
     # via -r requirements.in
 stevedore==5.4.0
     # via oslo-config
+term-image==0.7.2
+    # via -r requirements.in
 urllib3==2.2.3
     # via requests
 watchdog==6.0.0

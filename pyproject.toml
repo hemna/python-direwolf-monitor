@@ -133,7 +133,7 @@ packages = ["direwolf_monitor"]
 [build-system]
 requires = [
     "setuptools>=69.5.0",
-    "setuptools_scm>=0",
+    "setuptools_scm>=8",
     "wheel",
 ]
 build-backend = "setuptools.build_meta"
@@ -152,3 +152,4 @@ skip_gitignore = true
 branch = true
 
 [tool.setuptools_scm]
+
