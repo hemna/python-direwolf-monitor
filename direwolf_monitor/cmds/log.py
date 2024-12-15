@@ -52,12 +52,13 @@ def _on_disconnect(client, userdata, rc, flags, ass):
     print("MQTT Client disconnected")
     print(f"_on_disconnect rc:{rc} flags:{flags}")
             
-def _create_mqtt_client(ctx, mqtt_host, mqtt_port, mqtt_username, mqtt_password):
+def _create_mqtt_client(ctx, mqtt_host, mqtt_port, mqtt_username, mqtt_password,
+                        client_id):
     console = ctx.obj['console']
     
     client = mqtt.Client(
         callback_api_version=mqtt.CallbackAPIVersion.VERSION2,
-        client_id="python-direwolf-monitor",
+        client_id=client_id,
         # transport='websockets',
         # protocol=mqtt.MQTTv5
         transport='tcp',
@@ -265,7 +266,8 @@ def log_to_mqtt(ctx, mqtt_host, mqtt_port, mqtt_topic, mqtt_username, mqtt_passw
                 mqtt_host,
                 int(mqtt_port),
                 mqtt_username,
-                mqtt_password
+                mqtt_password,
+                "direwolf-monitor-log"
             )
             
             line_number = 0
@@ -455,7 +457,8 @@ def mqtt_to_terminal(ctx, mqtt_host, mqtt_port, mqtt_topic, mqtt_username, mqtt_
             mqtt_host,
             int(mqtt_port),
             mqtt_username,
-            mqtt_password
+            mqtt_password,
+            "direwolf-monitor-terminal"
         )
 
         client.on_connect = _rx_on_connect
