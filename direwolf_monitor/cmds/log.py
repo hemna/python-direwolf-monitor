@@ -48,7 +48,7 @@ def _on_publish(client, userdata, mid):
 def _on_connect(client, userdata, flags, rc):
     print(f"Connected to mqtt://{client}")
 
-def _on_disconnect(client, userdata, rc):
+def _on_disconnect(client, userdata, rc, flags, ass):
     print("MQTT Client disconnected")
             
 def _create_mqtt_client(ctx, mqtt_host, mqtt_port, mqtt_username, mqtt_password):
