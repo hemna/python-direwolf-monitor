@@ -276,11 +276,14 @@ def log_to_mqtt(ctx, mqtt_host, mqtt_port, mqtt_topic, mqtt_username, mqtt_passw
                     status.update(f"Reading line {line_number} from {direwolf_log}")
                     line_number += 1
                     print(line, end='')
-                    client.publish(
-                        mqtt_topic,
-                        payload=line,
-                        qos=0
-                    )
+                    if client.is_connected():
+                        client.publish(
+                            mqtt_topic,
+                            payload=line,
+                            qos=0
+                        )
+                    else:
+                        client.connect(mqtt_host, int(mqtt_port))
         else:
             console.print(f"[bold red]{direwolf_log} doesn't exist.[/]")
             
