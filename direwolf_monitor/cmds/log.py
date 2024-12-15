@@ -334,9 +334,9 @@ def log_to_mqtt(ctx, mqtt_host, mqtt_port, mqtt_topic, mqtt_username, mqtt_passw
 )
 @click.pass_context
 @cli_helper.process_standard_options
-def mqtt_to_display(ctx, mqtt_host, mqtt_port, mqtt_topic, mqtt_username, mqtt_password,
+def mqtt_to_terminal(ctx, mqtt_host, mqtt_port, mqtt_topic, mqtt_username, mqtt_password,
                     latitude, longitude):
-    """Pull direwolf log lines from mqtt and display them!
+    """Pull direwolf log lines from mqtt and display them in the terminal!
 
     Args:
         ctx (_type_): _description_
