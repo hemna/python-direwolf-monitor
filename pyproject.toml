@@ -11,7 +11,7 @@
 # There are some restrictions on what makes a valid project name
 # specification here:
 # https://packaging.python.org/specifications/core-metadata/#name
-name = "direwolf_log_monitor"
+name = "direwolf_monitor"
 description = "Direwolf Log monitor"
 
 # Specify which Python versions you support. In contrast to the
