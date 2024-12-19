@@ -10,6 +10,7 @@ from haversine import Unit, haversine
 from aprsd import conf
 from aprsd.packets import core as aprsd_core
 from aprsd.packets import log as aprsd_log
+import paho
 import paho.mqtt.client as mqtt
 from paho.mqtt.packettypes import PacketTypes
 from paho.mqtt.properties import Properties
@@ -42,39 +43,45 @@ def follow(file, sleep_sec=0.1) -> Iterator[str]:
         elif sleep_sec:
             time.sleep(sleep_sec)
             
-def _on_publish(client, userdata, mid):
+def _on_publish(client, userdata, mid, rc, properties):
     print(f"Published {mid}:{userdata}")
 
-def _on_connect(client, userdata, flags, rc):
+def _on_connect(client, userdata, flags, rc, properties):
     print(f"Connected to mqtt://{client}")
+    
+def _on_connect_fail(client, userdata):
+    print("MQTT Client failed to connect.")
 
-def _on_disconnect(client, userdata, rc, flags, ass):
+def _on_disconnect(client, userdata, flags, rc, properties):
     print("MQTT Client disconnected")
     print(f"_on_disconnect rc:{rc} flags:{flags}")
             
 def _create_mqtt_client(ctx, mqtt_host, mqtt_port, mqtt_username, mqtt_password,
-                        client_id):
+                        client_id, on_connect=None, on_connect_fail=None,
+                        on_disconnect=None, on_message=None, on_publish=None):
     console = ctx.obj['console']
     
     client = mqtt.Client(
         callback_api_version=mqtt.CallbackAPIVersion.VERSION2,
         client_id=client_id,
         # transport='websockets',
-        # protocol=mqtt.MQTTv5
-        transport='tcp',
-        protocol=mqtt.MQTTv311
+        protocol=paho.mqtt.client.MQTTv5,
+        #transport='tcp',
+        #protocol=mqtt.MQTTv311
     )
-    # self.client.on_publish = self.on_publish
-    client.on_connect = _on_connect
-    client.on_disconnect = _on_disconnect
+    client.on_connect = on_connect or _on_connect
+    client.on_connect_fail = on_connect_fail or _on_connect_fail
+    client.on_disconnect = on_disconnect or _on_disconnect
+    client.on_publish = on_publish or _on_publish
     
     client.username_pw_set(
-       mqtt_username,
-       mqtt_password 
+        mqtt_username,
+        mqtt_password 
     )
 
     mqtt_properties = Properties(PacketTypes.PUBLISH)
     mqtt_properties.MessageExpiryInterval = 30  # in seconds
+    
     properties = Properties(PacketTypes.CONNECT)
     properties.SessionExpiryInterval = 30 * 60  # in seconds
     console.print(f"Connecting to mqtt://{mqtt_host}:{mqtt_port}")
@@ -83,10 +90,9 @@ def _create_mqtt_client(ctx, mqtt_host, mqtt_port, mqtt_username, mqtt_password,
         port=mqtt_port,
         # clean_start=mqtt.MQTT_CLEAN_START_FIRST_ONLY,
         keepalive=60,
-        # properties=properties
+        properties=properties
     )
     return client
-
 
 def _create_symbol_image(symbol, symbol_table):
     symbol_dimension = 128
@@ -108,6 +114,22 @@ def _create_symbol_image(symbol, symbol_table):
     real.height=1
     return real
 
+def _add_gps(logit, packet, my_latitude, my_longitude):
+    DISTANCE_COLOR = "#FF5733"
+    DEGREES_COLOR = "#FFA900"
+    if hasattr(packet, "latitude") and hasattr(packet, "longitude"):
+        my_coords = (float(my_latitude), float(my_longitude))
+        packet_coords = (packet.latitude, packet.longitude)
+        try:
+            bearing = utils.calculate_initial_compass_bearing(my_coords, packet_coords)
+        except Exception as e:
+            LOG.error(f"Failed to calculate bearing: {e}")
+            bearing = 0
+        logit.append(
+            f" : [{DEGREES_COLOR}]{utils.degrees_to_cardinal(bearing, full_string=True)}[/]"
+            f"[green]@[/][{DISTANCE_COLOR}]{haversine(my_coords, packet_coords, unit=Unit.MILES):.2f}[/] miles",
+        )
+
 
 def packet_print(ctx, packet: aprsd_core.Packet,
                  latitude,
@@ -119,8 +141,6 @@ def packet_print(ctx, packet: aprsd_core.Packet,
     TX_COLOR = "red"
     RX_COLOR = "green"
     PACKET_COLOR = "cyan"
-    DISTANCE_COLOR = "#FF5733"
-    DEGREES_COLOR = "#FFA900"
     
     logit = []
     name = packet.__class__.__name__
@@ -160,15 +180,34 @@ def packet_print(ctx, packet: aprsd_core.Packet,
 
     tmp = None
     if packet.path:
-        tmp = f" {arrow} ".join(packet.path) + f" {arrow} "
+        tmp = f"{arrow}".join(packet.path) + f"{arrow}"
 
     logit.append(
-        f"[{FROM_COLOR}]{packet.from_call}[/] {arrow}"
+        f"[{FROM_COLOR}]{packet.from_call}[/]{arrow}"
         f"{tmp if tmp else ' '}"
         f"[{TO_COLOR}]{packet.to_call}[/]",
     )
-
-    if not isinstance(packet, aprsd_core.AckPacket) and not isinstance(packet, aprsd_core.RejectPacket):
+    
+    if isinstance(packet, aprsd_core.ThirdPartyPacket):
+        # show the original tx -> rx callsigns
+        sub_pkt = packet.subpacket
+        if sub_pkt.path:
+            tmp = f"{arrow}".join(sub_pkt.path) + f"{arrow}"
+            
+        sub_head = f" ([{FROM_COLOR}]{sub_pkt.from_call}[/]{arrow}" \
+            f"{tmp if tmp else ' '}" \
+            f"[{TO_COLOR}]{sub_pkt.to_call}[/]) :"
+        
+        logit.append(
+            sub_head,
+        )
+        logit.append(
+            sub_pkt.human_info
+        )
+        
+        _add_gps(logit, sub_pkt, latitude, longitude)
+         
+    elif not isinstance(packet, aprsd_core.AckPacket) and not isinstance(packet, aprsd_core.RejectPacket):
         logit.append(" : ")
         msg = packet.human_info
 
@@ -177,18 +216,20 @@ def packet_print(ctx, packet: aprsd_core.Packet,
             logit.append(f"[bright_yellow]{msg}[/]")
 
     # is there distance information?
-    if isinstance(packet, aprsd_core.GPSPacket) and latitude and longitude:
-        my_coords = (float(latitude), float(longitude))
-        packet_coords = (packet.latitude, packet.longitude)
-        try:
-            bearing = utils.calculate_initial_compass_bearing(my_coords, packet_coords)
-        except Exception as e:
-            LOG.error(f"Failed to calculate bearing: {e}")
-            bearing = 0
-        logit.append(
-            f" : [{DEGREES_COLOR}]{utils.degrees_to_cardinal(bearing, full_string=True)}[/]"
-            f"[green]@[/][{DISTANCE_COLOR}]{haversine(my_coords, packet_coords, unit=Unit.MILES):.2f}[/] miles",
-        )
+    #if isinstance(packet, aprsd_core.GPSPacket) and latitude and longitude:
+    _add_gps(logit, packet, latitude, longitude)
+    # if hasattr(packet, "latitude") and hasattr(packet, "longitude"):
+    #     my_coords = (float(latitude), float(longitude))
+    #     packet_coords = (packet.latitude, packet.longitude)
+    #     try:
+    #         bearing = utils.calculate_initial_compass_bearing(my_coords, packet_coords)
+    #     except Exception as e:
+    #         LOG.error(f"Failed to calculate bearing: {e}")
+    #         bearing = 0
+    #     logit.append(
+    #         f" : [{DEGREES_COLOR}]{utils.degrees_to_cardinal(bearing, full_string=True)}[/]"
+    #         f"[green]@[/][{DISTANCE_COLOR}]{haversine(my_coords, packet_coords, unit=Unit.MILES):.2f}[/] miles",
+    #     )
 
     console = ctx.obj['console']
     with console.capture() as capture:
@@ -277,7 +318,7 @@ def log_to_mqtt(ctx, mqtt_host, mqtt_port, mqtt_topic, mqtt_username, mqtt_passw
                 for line in follow(file):
                     status.update(f"Reading line {line_number} from {direwolf_log}")
                     line_number += 1
-                    print(line, end='')
+                    #print(line, end='')
                     client.publish(
                         mqtt_topic,
                         payload=line,
@@ -351,14 +392,17 @@ def mqtt_to_terminal(ctx, mqtt_host, mqtt_port, mqtt_topic, mqtt_username, mqtt_
     """
     console = ctx.obj['console']
 
-    def _rx_on_connect(client, userdata, flags, rc, ass):
+    def _rx_on_connect(client, userdata, flags, rc, properties):
         console.print(f"Connected with result code {rc}")
         console.print(f"userdata: {userdata}")
         console.print(f"flags: {flags}")
         client.subscribe(mqtt_topic)
         console.print(f"Subscribed to topic {mqtt_topic}")
+        
+    def _rx_on_connect_fail(client, userdata):
+        console.print("Failed to connect to MQTT host")
 
-    def _rx_on_disconnect(client, userdata, flags, rc, ass):
+    def _rx_on_disconnect(client, userdata, flags, rc, properties):
         console.print(f"Disconnected from mqtt server {mqtt_host} result code: {rc}")
         console.print(f"userdata: {userdata}")
         
@@ -379,7 +423,6 @@ def mqtt_to_terminal(ctx, mqtt_host, mqtt_port, mqtt_topic, mqtt_username, mqtt_
         #console.out(f"RAW line = '{line}'")
         search = re.search("^\[\d\.*\d*\] (.*)", line)
         if search is not None:
-            console.print(search)
             packetstring = search.group(1)
             packetstring = packetstring.replace('<0x0d>','\x0d'). \
                 replace('<0x1c>','\x1c').replace('<0x1e>','\x1e'). \
@@ -387,8 +430,7 @@ def mqtt_to_terminal(ctx, mqtt_host, mqtt_port, mqtt_topic, mqtt_username, mqtt_
             packet = _parse_packet(packetstring)
             if packet:
                 #aprsd_log.log(packet)
-                packet_print(ctx, packet, latitude=latitude,
-                             longitude=longitude)
+                packet_print(ctx, packet, latitude=latitude, longitude=longitude)
             #console.print(packet)
         elif "[0L]" in line:
             # packet that direwolf Transmitted
@@ -397,10 +439,8 @@ def mqtt_to_terminal(ctx, mqtt_host, mqtt_port, mqtt_topic, mqtt_username, mqtt_
             packet = _parse_packet(raw)
             if packet:
                 #aprsd_log.log(packet, tx=True)
-                packet_print(ctx, packet, latitude=latitude,
-                             longitude=longitude,
-                             tx=True)
-         #elif "[0H]" in line:
+                packet_print(ctx, packet, latitude=latitude, longitude=longitude, tx=True)
+        # elif "[0H]" in line:
             # packet RX'd already covered?
             # raw = line.replace("[0H]", "").strip()
             # console.print(f"IG {raw}")
@@ -416,8 +456,7 @@ def mqtt_to_terminal(ctx, mqtt_host, mqtt_port, mqtt_topic, mqtt_username, mqtt_
             packet = _parse_packet(raw)
             if packet:
                 #aprsd_log.log(packet)
-                packet_print(ctx, packet, latitude=latitude,
-                             longitude=longitude)
+                packet_print(ctx, packet, latitude=latitude, longitude=longitude)
             #console.print(packet)
         elif "[rx>ig]" in line:
             # Got a line from RF and sent to APRSIS 
@@ -433,8 +472,7 @@ def mqtt_to_terminal(ctx, mqtt_host, mqtt_port, mqtt_topic, mqtt_username, mqtt_
             packet = _parse_packet(raw)
             if packet:
                 # aprsd_log.log(packet)
-                packet_print(ctx, packet, latitude=latitude,
-                             longitude=longitude)
+                packet_print(ctx, packet, latitude=latitude, longitude=longitude)
             
         elif 'ig_to_tx' in line:
             # ignoring
@@ -455,7 +493,10 @@ def mqtt_to_terminal(ctx, mqtt_host, mqtt_port, mqtt_topic, mqtt_username, mqtt_
             int(mqtt_port),
             mqtt_username,
             mqtt_password,
-            "direwolf-monitor-terminal"
+            "direwolf-monitor-terminal",
+            on_connect = _rx_on_connect,
+            on_connect_fail = _rx_on_connect_fail,
+            on_message = _rx_on_message,
         )
 
         client.on_connect = _rx_on_connect
