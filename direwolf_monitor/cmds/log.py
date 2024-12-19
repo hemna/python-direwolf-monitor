@@ -310,13 +310,15 @@ def log_to_mqtt(ctx, mqtt_host, mqtt_port, mqtt_topic, mqtt_username, mqtt_passw
                 mqtt_password,
                 "direwolf-monitor-log"
             )
-            
+           
+            status.update(f"Opening file {my_file} for reading") 
             line_number = 0
             with open(my_file, 'r') as file:
                 # now move the pointer to the end of the file
+                status.update(f"Reading line {line_number} from {my_file}")
                 file.seek(0, 2)
                 for line in follow(file):
-                    status.update(f"Reading line {line_number} from {direwolf_log}")
+                    status.update(f"Reading line {line_number} from {my_file}")
                     line_number += 1
                     #print(line, end='')
                     client.publish(
