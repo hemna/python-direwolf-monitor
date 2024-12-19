@@ -1,23 +1,19 @@
 import logging
-import sys
-import uuid
+import time
 
 import click
 from oslo_config import cfg
-from oslo_context import context
-from oslo_log import log
 try:
     import RPi.GPIO as GPIO
 except Exception:
     print("fuct")
     pass
 
-import direwolf_monitor
 from direwolf_monitor.cli import cli
 from direwolf_monitor import cli_helper
 
 
-LOG = log.getLogger("dwm")
+LOG = logging.getLogger("dwm")
 CONF = cfg.CONF
 
 @cli.command()
@@ -30,7 +26,7 @@ def monitor_leds(ctx):
 
     GPIO.setmode(GPIO.BCM)  # logical pin numbers, not BOARD
     GPIO.setwarnings(False)
-    RED_LED = GPIO.setup(26, GPIO.IN)
+    # RED_LED = GPIO.setup(26, GPIO.IN)
 
     console.print("monitor LEDS Exit.")
     count = 1
@@ -38,7 +34,7 @@ def monitor_leds(ctx):
     with console.status(msg) as status:
         while count < 1000:
             led_state = GPIO.input(26)
-            status.update(f"{msg} : State {led_state} count {count}"
+            status.update(f"{msg} : State {led_state} count {count}")
             count += 1
             time.sleep(.1)
 

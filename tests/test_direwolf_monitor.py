@@ -6,7 +6,6 @@
 import unittest
 from click.testing import CliRunner
 
-from direwolf_monitor import direwolf_monitor
 from direwolf_monitor import cli
 
 

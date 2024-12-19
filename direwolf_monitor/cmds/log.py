@@ -7,15 +7,12 @@ from typing import Iterator, Optional
 import aprslib
 import click
 from haversine import Unit, haversine
-from aprsd import conf
 from aprsd.packets import core as aprsd_core
-from aprsd.packets import log as aprsd_log
 import paho
 import paho.mqtt.client as mqtt
 from paho.mqtt.packettypes import PacketTypes
 from paho.mqtt.properties import Properties
 
-import direwolf_monitor
 from direwolf_monitor.cli import cli
 from direwolf_monitor import cli_helper
 from direwolf_monitor import utils
@@ -138,13 +135,9 @@ def packet_print(ctx, packet: aprsd_core.Packet,
                  header: Optional[bool] = True) -> None:
     FROM_COLOR = "#C70039"
     TO_COLOR = "#D033FF"
-    TX_COLOR = "red"
-    RX_COLOR = "green"
-    PACKET_COLOR = "cyan"
     
     logit = []
     name = packet.__class__.__name__
-    pkt_max_send_count = 3
 
     if header:
         if tx:
@@ -293,8 +286,6 @@ def log_to_mqtt(ctx, mqtt_host, mqtt_port, mqtt_topic, mqtt_username, mqtt_passw
         ctx (_type_): _description_
     """
     console = ctx.obj['console']
-    count = 1
-    import time
     msg = f"Checking for direwolf log {direwolf_log}"
     with console.status(msg) as status:
         my_file = Path(direwolf_log)
@@ -413,10 +404,10 @@ def mqtt_to_terminal(ctx, mqtt_host, mqtt_port, mqtt_topic, mqtt_username, mqtt_
         try:
             packet_json = aprslib.parse(raw)
             return aprsd_core.factory(packet_json)
-        except aprslib.exceptions.ParseError as e:
+        except aprslib.exceptions.ParseError:
             # console.print(f"[bold red]Failed to parse '{raw}' because '{e}'")
             pass
-        except aprslib.exceptions.UnknownFormat as e:
+        except aprslib.exceptions.UnknownFormat:
             # console.print(f"[bold red]Failed to parse '{raw}' because '{e}'")
             pass
 

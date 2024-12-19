@@ -6,7 +6,7 @@ import click
 from oslo_config import cfg
 
 import direwolf_monitor
-from direwolf_monitor import cli_helper
+from direwolf_monitor import cli_helper, utils
 
 CONF = cfg.CONF
 APP = 'dwm'
@@ -60,9 +60,6 @@ def version(ctx):
 
 def main(args=None):
     """Console script for direwolf_monitor."""
-    from .cmds import (
-        log
-    )
     cli(auto_envvar_prefix="dwm")
 
 if __name__ == "__main__":
