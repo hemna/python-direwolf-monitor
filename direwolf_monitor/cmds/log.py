@@ -43,9 +43,6 @@ def follow(file, sleep_sec=0.1) -> Iterator[str]:
         elif sleep_sec:
             time.sleep(sleep_sec)
             
-def _on_publish(client, userdata, mid, rc, properties):
-    print(f"Published {mid}:{userdata} : {rc}:{properties}")
-
 def _on_connect(client, userdata, flags, rc, properties):
     print(f"Connected to mqtt://{client}")
     
@@ -55,10 +52,13 @@ def _on_connect_fail(client, userdata):
 def _on_disconnect(client, userdata, flags, rc, properties):
     print("MQTT Client disconnected")
     print(f"_on_disconnect rc:{rc} flags:{flags}")
+    
+def _on_message(client, userdata, flags, rc, properties):
+    print("on_message")
             
 def _create_mqtt_client(ctx, mqtt_host, mqtt_port, mqtt_username, mqtt_password,
                         client_id, on_connect=None, on_connect_fail=None,
-                        on_disconnect=None, on_message=None, on_publish=None):
+                        on_disconnect=None, on_message=None):
     console = ctx.obj['console']
     
     client = mqtt.Client(
@@ -72,7 +72,7 @@ def _create_mqtt_client(ctx, mqtt_host, mqtt_port, mqtt_username, mqtt_password,
     client.on_connect = on_connect or _on_connect
     client.on_connect_fail = on_connect_fail or _on_connect_fail
     client.on_disconnect = on_disconnect or _on_disconnect
-    client.on_publish = on_publish or _on_publish
+    client.on_message = on_message or _on_message
     
     client.username_pw_set(
         mqtt_username,
@@ -310,7 +310,7 @@ def log_to_mqtt(ctx, mqtt_host, mqtt_port, mqtt_topic, mqtt_username, mqtt_passw
                 mqtt_password,
                 "direwolf-monitor-log"
             )
-           
+
             status.update(f"Opening file {my_file} for reading") 
             line_number = 0
             with open(my_file, 'r') as file:
@@ -321,6 +321,7 @@ def log_to_mqtt(ctx, mqtt_host, mqtt_port, mqtt_topic, mqtt_username, mqtt_passw
                     status.update(f"Reading line {line_number} from {my_file}")
                     line_number += 1
                     #print(line, end='')
+                    print(f"Published {line}", end='')
                     client.publish(
                         mqtt_topic,
                         payload=line,
