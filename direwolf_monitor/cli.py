@@ -60,6 +60,9 @@ def version(ctx):
 
 def main(args=None):
     """Console script for direwolf_monitor."""
+    from .cmds import (
+        log # noqa
+    )
     cli(auto_envvar_prefix="dwm")
 
 if __name__ == "__main__":
