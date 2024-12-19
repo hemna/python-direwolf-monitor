@@ -44,7 +44,7 @@ def follow(file, sleep_sec=0.1) -> Iterator[str]:
             time.sleep(sleep_sec)
             
 def _on_publish(client, userdata, mid, rc, properties):
-    print(f"Published {mid}:{userdata}")
+    print(f"Published {mid}:{userdata} : {rc}:{properties}")
 
 def _on_connect(client, userdata, flags, rc, properties):
     print(f"Connected to mqtt://{client}")
