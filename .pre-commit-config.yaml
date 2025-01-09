@@ -11,11 +11,18 @@ repos:
     - id: check-docstring-first
     - id: check-builtin-literals
     - id: check-illegal-windows-names
+    - id: check-ast
 
 - repo: https://github.com/asottile/setup-cfg-fmt
   rev: v2.7.0
   hooks:
     - id: setup-cfg-fmt
+
+- repo: https://github.com/numpy/numpydoc
+  rev: v1.6.0
+  hooks:
+    - id: numpydoc-validation
+      exclude: (tests|docs)/.*
 
 - repo: https://github.com/astral-sh/ruff-pre-commit
   rev: v0.8.6
